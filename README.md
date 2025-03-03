@@ -1,89 +1,59 @@
-# Three.js Test Game
+# Wanderer: A Low-Poly Exploration Game
 
-A 3D game project built with React and Three.js, exploring 3D graphics and interactive gameplay.
+A relaxing, atmospheric walking simulator set in a vast low-poly world. Players explore an expansive landscape, discovering ancient megastructures and mysterious artifacts while accompanied by ambient, chill music.
 
-## 🚀 Features
+## Features
 
-- React 18 with TypeScript support
-- Three.js for 3D graphics with full TypeScript type definitions
-- Modern development setup with Vite
-- Hot Module Replacement (HMR)
-- ESLint with TypeScript support
-- Path aliases for cleaner imports (@/*)
+- First-person exploration in a vast procedurally generated world
+- Low-poly aesthetic with atmospheric lighting and effects
+- Discover megastructures and artifacts throughout the landscape
+- Relaxing, meditative gameplay experience
 
-## 🛠️ Prerequisites
+## Technical Stack
 
-- Node.js (v14 or higher)
+- React for UI components
+- Three.js for 3D rendering
+- TypeScript for type safety
+- Vite for fast development and building
+
+## Development
+
+### Prerequisites
+
+- Node.js (v14+)
 - npm or yarn
 
-## 📦 Installation
+### Installation
 
-1. Clone the repository:
 ```bash
-git clone [your-repo-url]
-cd threejs_test_game
-```
+# Clone the repository
+git clone https://github.com/yourusername/wanderer.git
+cd wanderer
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-# or
-yarn install
 ```
 
-## 🎮 Development
+### Running the Development Server
 
-Start the development server:
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
-The application will be available at `http://localhost:5173`
+This will start the development server at `http://localhost:5173`.
 
-## 🏗️ Building for Production
+### Building for Production
 
-Build the project:
 ```bash
 npm run build
-# or
-yarn build
 ```
 
-## 📚 Project Structure
+The built files will be in the `dist` directory.
 
-```
-threejs_test_game/
-├── src/
-│   ├── components/     # React components
-│   ├── scenes/        # Three.js scenes
-│   ├── models/        # 3D models and assets
-│   └── utils/         # Utility functions
-├── public/            # Static assets
-├── tsconfig.json      # TypeScript configuration
-├── tsconfig.node.json # Node-specific TypeScript config
-└── vite.config.ts     # Vite configuration
-```
+## Game Design
 
-## 🔧 TypeScript Configuration
+See [game_design.md](./game_design.md) for detailed information about the game concept, mechanics, and implementation plan.
 
-The project uses TypeScript with the following key configurations:
+## License
 
-- Strict type checking enabled
-- Path aliases for cleaner imports (use `@/` to import from `src/`)
-- Full type support for React and Three.js
-- Modern ES2020 target
-- React JSX support
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+MIT 

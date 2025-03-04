@@ -1,85 +1,269 @@
 import * as THREE from 'three';
 
-/**
- * Creates a simple boat model with a hull, deck, and wheel
- * @returns THREE.Group containing the boat model
- */
 export const createBoat = (): THREE.Group => {
-  // Create a group to hold all boat parts
-  const boat = new THREE.Group();
+  const boatGroup = new THREE.Group();
   
-  // Create the hull (bottom part of the boat)
-  const hullGeometry = new THREE.BoxGeometry(10, 3, 25);
+  // Boat hull - red with yellow stripe
+  const hullGeometry = new THREE.BoxGeometry(8, 4, 20);
   const hullMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x8B4513, // Brown
+    color: 0xe74c3c, // Bright red
     roughness: 0.7,
-    metalness: 0.2
+    metalness: 0.1
   });
   const hull = new THREE.Mesh(hullGeometry, hullMaterial);
-  hull.position.y = -1; // Position hull below deck
+  hull.position.y = 0;
   hull.castShadow = true;
   hull.receiveShadow = true;
+  boatGroup.add(hull);
   
-  // Create the deck (top part of the boat)
-  const deckGeometry = new THREE.BoxGeometry(8, 1, 20);
+  // Yellow stripe on hull
+  const stripeGeometry = new THREE.BoxGeometry(8.1, 1, 20.1);
+  const stripeMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xf1c40f, // Bright yellow
+    roughness: 0.7,
+    metalness: 0.1
+  });
+  const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+  stripe.position.y = 0.5;
+  stripe.castShadow = true;
+  stripe.receiveShadow = true;
+  boatGroup.add(stripe);
+  
+  // Dark bottom of hull
+  const bottomGeometry = new THREE.BoxGeometry(8, 1, 20);
+  const bottomMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x34495e, // Dark blue-gray
+    roughness: 0.7,
+    metalness: 0.1
+  });
+  const bottom = new THREE.Mesh(bottomGeometry, bottomMaterial);
+  bottom.position.y = -1.5;
+  bottom.castShadow = true;
+  bottom.receiveShadow = true;
+  boatGroup.add(bottom);
+  
+  // Boat deck - tan colored
+  const deckGeometry = new THREE.BoxGeometry(7.5, 0.5, 19);
   const deckMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xD2B48C, // Tan
-    roughness: 0.5,
+    color: 0xf5d6a8, // Sandy/tan color
+    roughness: 0.8,
     metalness: 0.1
   });
   const deck = new THREE.Mesh(deckGeometry, deckMaterial);
-  deck.position.y = 0.5; // Position deck above hull
+  deck.position.y = 2.25;
   deck.castShadow = true;
   deck.receiveShadow = true;
+  boatGroup.add(deck);
   
-  // Create a cabin
-  const cabinGeometry = new THREE.BoxGeometry(6, 3, 8);
+  // Cabin - white with blue windows
+  const cabinGeometry = new THREE.BoxGeometry(6, 4, 6);
   const cabinMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xD2B48C, // Tan
-    roughness: 0.6,
+    color: 0xffffff, // White
+    roughness: 0.7,
     metalness: 0.1
   });
   const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
-  cabin.position.set(0, 2, -4); // Position cabin on deck
+  cabin.position.y = 4.5;
+  cabin.position.z = -4; // Positioned toward the front
   cabin.castShadow = true;
   cabin.receiveShadow = true;
+  boatGroup.add(cabin);
   
-  // Create a wheel for steering
-  const wheelGeometry = new THREE.TorusGeometry(1, 0.1, 16, 32);
-  const wheelMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x8B4513, // Brown
-    roughness: 0.5,
+  // Cabin roof - red
+  const roofGeometry = new THREE.BoxGeometry(6.5, 0.5, 6.5);
+  const roofMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xe74c3c, // Bright red
+    roughness: 0.7,
+    metalness: 0.1
+  });
+  const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+  roof.position.y = 6.75;
+  roof.position.z = -4;
+  roof.castShadow = true;
+  roof.receiveShadow = true;
+  boatGroup.add(roof);
+  
+  // Front window - blue
+  const frontWindowGeometry = new THREE.PlaneGeometry(4, 2);
+  const windowMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x3498db, // Light blue
+    roughness: 0.3,
+    metalness: 0.5,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide
+  });
+  const frontWindow = new THREE.Mesh(frontWindowGeometry, windowMaterial);
+  frontWindow.position.y = 5;
+  frontWindow.position.z = -7.01; // Slightly offset to avoid z-fighting
+  frontWindow.rotation.y = Math.PI;
+  frontWindow.castShadow = false;
+  frontWindow.receiveShadow = false;
+  boatGroup.add(frontWindow);
+  
+  // Side windows - blue
+  const sideWindowGeometry = new THREE.PlaneGeometry(4, 2);
+  const leftWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+  leftWindow.position.y = 5;
+  leftWindow.position.z = -4;
+  leftWindow.position.x = 3.01; // Slightly offset
+  leftWindow.rotation.y = Math.PI / 2;
+  leftWindow.castShadow = false;
+  leftWindow.receiveShadow = false;
+  boatGroup.add(leftWindow);
+  
+  const rightWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+  rightWindow.position.y = 5;
+  rightWindow.position.z = -4;
+  rightWindow.position.x = -3.01; // Slightly offset
+  rightWindow.rotation.y = -Math.PI / 2;
+  rightWindow.castShadow = false;
+  rightWindow.receiveShadow = false;
+  boatGroup.add(rightWindow);
+  
+  // Smokestack/exhaust pipe
+  const stackGeometry = new THREE.CylinderGeometry(0.6, 0.8, 4, 8);
+  const stackMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x7f8c8d, // Gray
+    roughness: 0.7,
     metalness: 0.3
   });
-  const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-  wheel.position.set(0, 2, 5); // Position wheel at front of boat
-  wheel.rotation.x = Math.PI / 2; // Rotate to be vertical
-  wheel.castShadow = true;
+  const stack = new THREE.Mesh(stackGeometry, stackMaterial);
+  stack.position.y = 8;
+  stack.position.z = -2;
+  stack.castShadow = true;
+  stack.receiveShadow = true;
+  boatGroup.add(stack);
   
-  // Create wheel spokes
-  for (let i = 0; i < 4; i++) {
-    const spokeGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2);
-    const spoke = new THREE.Mesh(spokeGeometry, wheelMaterial);
-    spoke.rotation.z = (Math.PI / 4) * i;
-    wheel.add(spoke);
+  // Top of smokestack
+  const stackTopGeometry = new THREE.CylinderGeometry(0.8, 0.6, 0.5, 8);
+  const stackTopMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x34495e, // Dark blue-gray
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  const stackTop = new THREE.Mesh(stackTopGeometry, stackTopMaterial);
+  stackTop.position.y = 10;
+  stackTop.position.z = -2;
+  stackTop.castShadow = true;
+  stackTop.receiveShadow = true;
+  boatGroup.add(stackTop);
+  
+  // Flag pole
+  const flagPoleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3, 8);
+  const flagPoleMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x7f8c8d, // Gray
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  const flagPole = new THREE.Mesh(flagPoleGeometry, flagPoleMaterial);
+  flagPole.position.y = 4;
+  flagPole.position.z = 8; // At the back of the boat
+  flagPole.position.x = 0;
+  boatGroup.add(flagPole);
+  
+  // Flag
+  const flagGeometry = new THREE.PlaneGeometry(1.5, 1);
+  const flagMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xe74c3c, // Red
+    roughness: 0.7,
+    metalness: 0.1,
+    side: THREE.DoubleSide
+  });
+  const flag = new THREE.Mesh(flagGeometry, flagMaterial);
+  flag.position.y = 5;
+  flag.position.z = 8;
+  flag.position.x = 0.75;
+  flag.rotation.y = Math.PI / 2;
+  flag.castShadow = true;
+  flag.receiveShadow = true;
+  // Store flag for animation
+  (boatGroup as any).flag = flag;
+  boatGroup.add(flag);
+  
+  // Life preservers (3 of them)
+  const preserverGeometry = new THREE.TorusGeometry(0.6, 0.2, 8, 16);
+  const preserverMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xffffff, // White
+    roughness: 0.7,
+    metalness: 0.1
+  });
+  
+  // Left side preservers
+  const leftPreserver1 = new THREE.Mesh(preserverGeometry, preserverMaterial);
+  leftPreserver1.position.x = 4.1;
+  leftPreserver1.position.y = 3;
+  leftPreserver1.position.z = 0;
+  leftPreserver1.rotation.y = Math.PI / 2;
+  leftPreserver1.castShadow = true;
+  leftPreserver1.receiveShadow = true;
+  boatGroup.add(leftPreserver1);
+  
+  const leftPreserver2 = new THREE.Mesh(preserverGeometry, preserverMaterial);
+  leftPreserver2.position.x = 4.1;
+  leftPreserver2.position.y = 3;
+  leftPreserver2.position.z = 3;
+  leftPreserver2.rotation.y = Math.PI / 2;
+  leftPreserver2.castShadow = true;
+  leftPreserver2.receiveShadow = true;
+  boatGroup.add(leftPreserver2);
+  
+  // Right side preserver
+  const rightPreserver = new THREE.Mesh(preserverGeometry, preserverMaterial);
+  rightPreserver.position.x = -4.1;
+  rightPreserver.position.y = 3;
+  rightPreserver.position.z = 0;
+  rightPreserver.rotation.y = Math.PI / 2;
+  rightPreserver.castShadow = true;
+  rightPreserver.receiveShadow = true;
+  boatGroup.add(rightPreserver);
+  
+  // Add rudder
+  const rudderGeometry = new THREE.BoxGeometry(0.5, 2, 3);
+  const rudderMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x7f8c8d, // Gray
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  const rudder = new THREE.Mesh(rudderGeometry, rudderMaterial);
+  rudder.position.y = 0;
+  rudder.position.z = 10;
+  rudder.castShadow = true;
+  rudder.receiveShadow = true;
+  // Store rudder for animation
+  (boatGroup as any).rudder = rudder;
+  boatGroup.add(rudder);
+  
+  // Create water splash particles
+  const splashCount = 20;
+  const splashGroup = new THREE.Group();
+  const splashGeometry = new THREE.SphereGeometry(0.2, 4, 4);
+  const splashMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.7
+  });
+  
+  for (let i = 0; i < splashCount; i++) {
+    const splash = new THREE.Mesh(splashGeometry, splashMaterial);
+    splash.visible = false;
+    // Store initial position and velocity for animation
+    (splash as any).velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 2,
+      Math.random() * 5 + 2,
+      (Math.random() - 0.5) * 2
+    );
+    (splash as any).life = 0;
+    (splash as any).maxLife = Math.random() * 1 + 0.5;
+    splashGroup.add(splash);
   }
   
-  // Create a rudder
-  const rudderGeometry = new THREE.BoxGeometry(0.5, 2, 3);
-  const rudder = new THREE.Mesh(rudderGeometry, hullMaterial);
-  rudder.position.set(0, -1, 10); // Position at back of boat
-  rudder.castShadow = true;
+  // Position splash at the front of the boat
+  splashGroup.position.z = -10;
+  splashGroup.position.y = 0;
+  // Store splash group for animation
+  (boatGroup as any).splashGroup = splashGroup;
+  boatGroup.add(splashGroup);
   
-  // Store references to interactive parts
-  (boat as any).wheel = wheel;
-  (boat as any).rudder = rudder;
-  
-  // Add all parts to the boat group
-  boat.add(hull);
-  boat.add(deck);
-  boat.add(cabin);
-  boat.add(wheel);
-  boat.add(rudder);
-  
-  return boat;
+  return boatGroup;
 }; 

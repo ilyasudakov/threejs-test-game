@@ -5,6 +5,7 @@ const Game = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneManagerRef = useRef<SceneManager | null>(null);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
+  const [debugMessage, setDebugMessage] = useState<string>('');
   
   // Player offset from boat
   const playerOffsetX = 0;
@@ -35,15 +36,34 @@ const Game = () => {
     
     // Add pointer lock change listener
     const handlePointerLockChange = () => {
-      setIsPointerLocked(document.pointerLockElement === containerRef.current);
+      const isLocked = document.pointerLockElement === containerRef.current;
+      setIsPointerLocked(isLocked);
+      setDebugMessage(`Pointer ${isLocked ? 'locked' : 'unlocked'}`);
     };
     
     document.addEventListener('pointerlockchange', handlePointerLockChange);
+    
+    // Add click handler to container
+    const handleContainerClick = () => {
+      setDebugMessage('Container clicked, requesting pointer lock...');
+      containerRef.current?.requestPointerLock();
+    };
+    
+    containerRef.current.addEventListener('click', handleContainerClick);
+    
+    // Add key event debug
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setDebugMessage(`Key pressed: ${e.code}`);
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
     
     // Cleanup function
     return () => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      document.removeEventListener('keydown', handleKeyDown);
+      containerRef.current?.removeEventListener('click', handleContainerClick);
       
       if (sceneManagerRef.current) {
         sceneManagerRef.current.dispose();
@@ -59,28 +79,24 @@ const Game = () => {
         style={{ 
           width: '100%', 
           height: '100vh', 
-          overflow: 'hidden' 
+          overflow: 'hidden',
+          cursor: 'pointer',
+          position: 'relative'
         }} 
       />
-      
-      {!isPointerLocked && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          color: 'white',
-          padding: '20px',
-          borderRadius: '10px',
-          textAlign: 'center',
-          pointerEvents: 'none'
-        }}>
-          <h2>Game Controls</h2>
-          <p>Use WASD or Arrow Keys to move</p>
-          <p>Click anywhere to enable mouse look</p>
-        </div>
-      )}
+      {/* Debug overlay - always visible */}
+      <div style={{
+        position: 'absolute',
+        bottom: '10px',
+        left: '10px',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        color: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        zIndex: 100
+      }}>
+        {debugMessage}
+      </div>
     </>
   );
 };

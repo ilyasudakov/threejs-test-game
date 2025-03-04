@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { FirstPersonControls } from './firstPersonControls';
-import { calculateWaveHeightAt } from './waveCalculator';
 
 export interface BoatControllerProps {
   boat: THREE.Group;
@@ -43,43 +42,7 @@ export class BoatController {
     // Rotate boat to match direction
     this.boat.rotation.y = -boatDirection;
     
-    // Update boat height based on waves
-    if (this.terrain) {
-      const waveHeight = calculateWaveHeightAt(
-        this.boat.position.x,
-        this.boat.position.z,
-        (this.terrain as any).waveParams,
-        time,
-        this.terrain
-      );
-      
-      // Smoothly interpolate boat height
-      this.boat.position.y += (waveHeight - this.boat.position.y) * 0.1;
-      
-      // Apply slight rotation based on wave gradient for more realistic movement
-      const frontPos = calculateWaveHeightAt(
-        this.boat.position.x + Math.sin(boatDirection) * 10,
-        this.boat.position.z + Math.cos(boatDirection) * 10,
-        (this.terrain as any).waveParams,
-        time,
-        this.terrain
-      );
-      
-      const rightPos = calculateWaveHeightAt(
-        this.boat.position.x + Math.sin(boatDirection + Math.PI/2) * 5,
-        this.boat.position.z + Math.cos(boatDirection + Math.PI/2) * 5,
-        (this.terrain as any).waveParams,
-        time,
-        this.terrain
-      );
-      
-      // Calculate pitch and roll based on wave heights
-      const pitchAngle = Math.atan2(frontPos - waveHeight, 10) * 0.5;
-      const rollAngle = Math.atan2(rightPos - waveHeight, 5) * 0.5;
-      
-      // Apply rotation with smoothing
-      this.boat.rotation.x += (pitchAngle - this.boat.rotation.x) * 0.1;
-      this.boat.rotation.z += (rollAngle - this.boat.rotation.z) * 0.1;
-    }
+    // Keep boat at a fixed height since we have static waves
+    this.boat.position.y = 2; // Fixed height above water
   }
 } 

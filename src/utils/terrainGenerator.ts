@@ -1,32 +1,22 @@
 import * as THREE from 'three';
-import { createNoise2D } from 'simplex-noise';
 
-// Create a simple low-poly sea using simplex noise
+// Create a simple flat sea with color variation
 export const createTerrain = (
   width = 1000,
   height = 1000,
-  segments = 100,
-  amplitude = 2, // Reduced amplitude for gentler waves
-  seed = Math.random()
+  segments = 100
 ): THREE.Mesh => {
-  // Initialize simplex noise with seed
-  const noise2D = createNoise2D(() => seed);
+  console.log('Creating static terrain');
   
   // Create geometry
   const geometry = new THREE.PlaneGeometry(width, height, segments, segments);
   
-  // Store original vertex positions BEFORE modifying them
+  // Store original vertex positions
   const vertices = geometry.attributes.position.array;
   const originalPositions = new Float32Array(vertices.length);
   for (let i = 0; i < vertices.length; i++) {
     originalPositions[i] = vertices[i];
   }
-  
-  // We'll skip applying initial wave heights here, as they'll be applied in the animation loop
-  // This creates a flat surface initially, which will be animated
-  
-  // Update geometry
-  geometry.computeVertexNormals();
   
   // Create vertex colors for the water
   const colors = new Float32Array(vertices.length);
@@ -78,11 +68,6 @@ export const createTerrain = (
   // Add custom property to store original positions
   (terrain as any).originalPositions = originalPositions;
   
-  // Add wave direction and speed properties
-  (terrain as any).waveDirection = new THREE.Vector2(1, 1).normalize();
-  (terrain as any).waveSpeed = 0.5;
-  (terrain as any).waveHeight = amplitude;
-  
   // Store color information for dynamic updates
   (terrain as any).colorInfo = {
     deepColor: deepColor,
@@ -90,5 +75,6 @@ export const createTerrain = (
     foamColor: foamColor
   };
   
+  console.log('Static terrain created');
   return terrain;
 }; 

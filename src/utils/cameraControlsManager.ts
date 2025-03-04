@@ -30,6 +30,7 @@ export class CameraControlsManager {
     playerOffsetY = 5,
     playerOffsetZ = 0
   }: CameraControlsManagerProps) {
+    console.log('CameraControlsManager constructor called');
     this.camera = camera;
     this.renderer = renderer;
     this.boat = boat;
@@ -39,10 +40,25 @@ export class CameraControlsManager {
 
     // Initialize first-person controls by default
     this.initFirstPersonControls();
+    console.log('CameraControlsManager initialized');
   }
 
   private initFirstPersonControls(): void {
-    this.orbitControls = null;
+    console.log('Initializing first person controls');
+    
+    // Dispose of orbit controls if they exist
+    if (this.orbitControls) {
+      this.orbitControls.dispose();
+      this.orbitControls = null;
+    }
+    
+    // Dispose of first person controls if they exist
+    if (this.fpControls) {
+      this.fpControls.dispose();
+      this.fpControls = null;
+    }
+    
+    // Create new first person controls
     this.fpControls = new FirstPersonControls(this.camera, this.renderer.domElement);
     
     // Reset camera position to boat if available
@@ -55,20 +71,39 @@ export class CameraControlsManager {
     } else {
       this.camera.position.set(4, 5, -300);
     }
+    
+    console.log('First person controls initialized');
   }
 
   private initOrbitControls(): void {
-    this.fpControls = null;
+    console.log('Initializing orbit controls');
+    
+    // Dispose of first person controls if they exist
+    if (this.fpControls) {
+      this.fpControls.dispose();
+      this.fpControls = null;
+    }
+    
+    // Dispose of orbit controls if they exist
+    if (this.orbitControls) {
+      this.orbitControls.dispose();
+      this.orbitControls = null;
+    }
+    
+    // Create new orbit controls
     this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbitControls.enableDamping = true;
     this.orbitControls.dampingFactor = 0.05;
     
     // Move camera back for better view
     this.camera.position.set(0, 200, 400);
+    
+    console.log('Orbit controls initialized');
   }
 
   public toggleDevMode(): void {
     this.devMode = !this.devMode;
+    console.log('Dev mode toggled:', this.devMode ? 'enabled' : 'disabled');
     
     if (this.devMode) {
       this.initOrbitControls();
@@ -106,10 +141,16 @@ export class CameraControlsManager {
   }
 
   public dispose(): void {
+    console.log('Disposing CameraControlsManager');
+    
     if (this.orbitControls) {
       this.orbitControls.dispose();
+      this.orbitControls = null;
     }
-    // FirstPersonControls doesn't have a dispose method, but we should clean up event listeners
-    // in a real implementation
+    
+    if (this.fpControls) {
+      this.fpControls.dispose();
+      this.fpControls = null;
+    }
   }
 } 

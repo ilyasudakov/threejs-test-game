@@ -106,6 +106,10 @@ export class SceneManager {
       boat: this.boat
     });
     
+    // Initialize static waves
+    console.log('Initializing static waves in SceneManager constructor');
+    updateWaves(this.terrain);
+    
     // Start animation loop
     this.animate();
   }
@@ -116,8 +120,26 @@ export class SceneManager {
     const delta = this.clock.getDelta();
     const time = this.clock.getElapsedTime();
     
-    // Animate the sea waves
-    updateWaves(this.terrain, time);
+    // Debug log every 5 seconds
+    if (Math.floor(time) % 5 === 0 && Math.floor(time) !== Math.floor(time - delta)) {
+      console.log('Animation frame at time:', time.toFixed(2));
+      
+      // Log camera position
+      console.log('Camera position:', 
+        this.camera.position.x.toFixed(2), 
+        this.camera.position.y.toFixed(2), 
+        this.camera.position.z.toFixed(2)
+      );
+      
+      // Log movement state from controls
+      const fpControls = this.cameraManager.getFirstPersonControls();
+      if (fpControls) {
+        console.log('Boat speed:', fpControls.getBoatSpeed());
+        console.log('Boat direction:', fpControls.getBoatDirection());
+      }
+    }
+    
+    // No longer updating waves every frame
     
     // Update boat if not in dev mode
     if (!this.cameraManager.isDevMode()) {

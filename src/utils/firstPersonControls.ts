@@ -9,34 +9,21 @@ export class FirstPersonControls {
   private moveBackward: boolean = false;
   private moveLeft: boolean = false;
   private moveRight: boolean = false;
-  private canJump: boolean = false;
   
-  // Physics
-  private velocity: THREE.Vector3 = new THREE.Vector3();
-  private direction: THREE.Vector3 = new THREE.Vector3();
+  // Character movement speed
+  private readonly movementSpeed: number = 5.0;
   
-  // Boat physics
+  // Boat physics - simplified but kept for compatibility
   private boatSpeed: number = 0;
-  private boatMaxSpeed: number = 15.0;
-  private boatAcceleration: number = 2.0;
-  private boatDeceleration: number = 1.0;
-  private boatRotationSpeed: number = 0.5;
-  private boatInertia: number = 0.95; // Higher values = more inertia
-  private boatDirection: number = 0; // Angle in radians
-  
-  // Constants
-  private readonly movementSpeed: number = 10.0;
-  private readonly jumpHeight: number = 20.0;
-  private readonly gravity: number = 30.0;
+  private boatDirection: number = 0;
   
   // Mouse look
   private euler: THREE.Euler = new THREE.Euler(0, 0, 0, 'YXZ');
   private mouseSensitivity: number = 0.002;
   private isLocked: boolean = false;
   
-  // Raycaster for terrain height sampling
-  private raycaster: THREE.Raycaster = new THREE.Raycaster();
-  private playerHeight: number = 1.7; // Height of player's eyes from ground
+  // Player height
+  private playerHeight: number = 1.7;
   
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
     this.camera = camera;
@@ -47,9 +34,6 @@ export class FirstPersonControls {
     
     // Initialize keyboard controls
     this.initKeyboardControls();
-    
-    // Set up raycaster for terrain height sampling
-    this.raycaster.ray.direction.set(0, -1, 0); // Cast ray downward
   }
   
   private initPointerLock(): void {
@@ -98,9 +82,6 @@ export class FirstPersonControls {
         case 'KeyD':
           this.moveRight = true;
           break;
-        case 'Space':
-          // No jumping in a boat
-          break;
       }
     });
     
@@ -126,106 +107,50 @@ export class FirstPersonControls {
     });
   }
   
-  // Sample terrain height at a given position
-  private getTerrainHeightAt(x: number, z: number, terrain: THREE.Mesh): number {
-    // Set raycaster origin high above the terrain at the x,z position
-    this.raycaster.ray.origin.set(x, 1000, z);
-    
-    // Cast ray downward to find terrain height
-    const intersects = this.raycaster.intersectObject(terrain);
-    
-    if (intersects.length > 0) {
-      // Return the y-coordinate of the intersection point
-      return intersects[0].point.y;
-    }
-    
-    // Default to 0 if no intersection found
-    return 0;
-  }
-  
   public update(deltaTime: number, terrain?: THREE.Mesh): void {
-    if (!this.isLocked) return;
+    // Remove the pointer lock check to allow movement even without pointer lock
+    // if (!this.isLocked) return;
     
-    // Boat movement physics
+    // Simple character movement
+    const moveSpeed = this.movementSpeed * deltaTime;
     
-    // Apply acceleration/deceleration
+    // Calculate movement direction based on camera orientation
+    const direction = new THREE.Vector3();
+    const rotation = this.camera.getWorldDirection(direction);
+    
+    // Forward/backward movement
     if (this.moveForward) {
-      // Accelerate forward
-      this.boatSpeed += this.boatAcceleration * deltaTime;
-      if (this.boatSpeed > this.boatMaxSpeed) {
-        this.boatSpeed = this.boatMaxSpeed;
-      }
+      this.camera.position.addScaledVector(direction, moveSpeed);
+      this.boatSpeed = this.movementSpeed; // For compatibility
     } else if (this.moveBackward) {
-      // Decelerate/reverse
-      this.boatSpeed -= this.boatAcceleration * deltaTime;
-      if (this.boatSpeed < -this.boatMaxSpeed / 2) { // Boats are slower in reverse
-        this.boatSpeed = -this.boatMaxSpeed / 2;
-      }
+      this.camera.position.addScaledVector(direction, -moveSpeed);
+      this.boatSpeed = -this.movementSpeed; // For compatibility
     } else {
-      // Natural deceleration when no input
-      if (Math.abs(this.boatSpeed) > 0.1) {
-        this.boatSpeed *= Math.pow(this.boatInertia, deltaTime * 60); // Scale with framerate
-      } else {
-        this.boatSpeed = 0;
+      this.boatSpeed = 0; // For compatibility
+    }
+    
+    // Left/right movement (strafe)
+    if (this.moveLeft || this.moveRight) {
+      const rightVector = new THREE.Vector3();
+      rightVector.crossVectors(this.camera.up, direction).normalize();
+      
+      if (this.moveLeft) {
+        this.camera.position.addScaledVector(rightVector, -moveSpeed);
+        this.boatDirection += 0.01; // For compatibility
+      } else if (this.moveRight) {
+        this.camera.position.addScaledVector(rightVector, moveSpeed);
+        this.boatDirection -= 0.01; // For compatibility
       }
     }
     
-    // Apply turning - only effective when moving
-    const effectiveRotationSpeed = this.boatRotationSpeed * Math.min(1.0, Math.abs(this.boatSpeed) / 5.0);
-    
-    if (this.moveLeft) {
-      // Turn left (counterclockwise)
-      this.boatDirection += effectiveRotationSpeed * deltaTime;
-    } else if (this.moveRight) {
-      // Turn right (clockwise)
-      this.boatDirection -= effectiveRotationSpeed * deltaTime;
-    }
-    
-    // Calculate movement vector based on boat direction and speed
-    const moveX = Math.sin(this.boatDirection) * this.boatSpeed * deltaTime;
-    const moveZ = Math.cos(this.boatDirection) * this.boatSpeed * deltaTime;
-    
-    // Apply movement to camera (boat movement is now handled in Game.tsx)
-    this.camera.position.x += moveX;
-    this.camera.position.z += moveZ;
-    
-    // Align camera with boat direction when moving
-    if (Math.abs(this.boatSpeed) > 0.5) {
-      // Gradually align camera with boat direction
-      const currentYaw = this.euler.y;
-      const targetYaw = -this.boatDirection;
-      
-      // Calculate the difference, handling the circular nature of angles
-      let yawDiff = targetYaw - currentYaw;
-      if (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
-      if (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
-      
-      // Gradually rotate towards the target direction
-      const rotationFactor = 0.02; // Lower = slower rotation
-      this.euler.y += yawDiff * rotationFactor;
-      
-      // Update camera quaternion
-      this.camera.quaternion.setFromEuler(this.euler);
-    }
-    
-    // Water height sampling for boat
+    // Keep player at a fixed height above the boat deck
     if (terrain) {
-      // Get water height at boat's position
-      const waterHeight = this.getTerrainHeightAt(
-        this.camera.position.x, 
-        this.camera.position.z, 
-        terrain
-      );
-      
-      // Set camera height to follow water surface
-      this.camera.position.y = waterHeight + this.playerHeight;
-    } else {
-      // Default water height if no terrain
-      this.camera.position.y = this.playerHeight;
+      // Fixed height for simplicity
+      this.camera.position.y = 5 + this.playerHeight;
     }
   }
   
-  // Public getters for boat properties
+  // Public getters for boat properties (kept for compatibility)
   public getBoatSpeed(): number {
     return this.boatSpeed;
   }

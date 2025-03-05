@@ -23,10 +23,10 @@ export class BoatControls {
   private turnRight: boolean = false;
   
   // Movement settings
-  private maxSpeed: number = 10.0;
-  private acceleration: number = 2.0;
-  private deceleration: number = 1.0;
-  private rotationSpeed: number = 1.0;
+  private maxSpeed: number = 900.0; // Increased from 300 to 900 (3x more)
+  private acceleration: number = 180.0; // Increased from 60 to 180 (3x more)
+  private deceleration: number = 90.0; // Increased from 30 to 90 (3x more)
+  private rotationSpeed: number = 15.0; // Increased from 5 to 15 for better turning at high speeds
   
   // Mouse look (for first-person mode)
   private mouseSensitivity: number = 0.002;
@@ -37,12 +37,6 @@ export class BoatControls {
   // Physics
   private drag: number = 0.95; // Air/water resistance
   
-  // Debug display
-  private debugElement: HTMLElement | null = null;
-  private debugUpdateInterval: number = 100; // ms
-  private lastDebugUpdate: number = 0;
-  private showDebug: boolean = true;
-  
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
     this.camera = camera;
     this.domElement = domElement;
@@ -50,9 +44,6 @@ export class BoatControls {
     // Initialize controls
     this.initKeyboardControls();
     this.initPointerLock();
-    
-    // Create debug display
-    this.createDebugDisplay();
     
     // Set initial camera position
     this.updateCameraPosition();
@@ -68,11 +59,13 @@ export class BoatControls {
     switch (event.code) {
       case 'ArrowUp':
       case 'KeyW':
-        this.moveForward = true;
+        // Inverted: W/Up now moves backward
+        this.moveBackward = true;
         break;
       case 'ArrowDown':
       case 'KeyS':
-        this.moveBackward = true;
+        // Inverted: S/Down now moves forward
+        this.moveForward = true;
         break;
       case 'ArrowLeft':
       case 'KeyA':
@@ -86,25 +79,6 @@ export class BoatControls {
       case 'KeyC':
         this.cycleCameraMode();
         break;
-      // Toggle debug display with F1 key
-      case 'F1':
-        this.showDebug = !this.showDebug;
-        if (this.debugElement) {
-          this.debugElement.style.display = this.showDebug ? 'block' : 'none';
-        }
-        break;
-      // Increase speed with + key
-      case 'Equal': // + key
-        if (event.shiftKey) {
-          this.maxSpeed = Math.min(20, this.maxSpeed + 1);
-          this.updateDebugDisplay(); // Force update to show new speed
-        }
-        break;
-      // Decrease speed with - key
-      case 'Minus': // - key
-        this.maxSpeed = Math.max(1, this.maxSpeed - 1);
-        this.updateDebugDisplay(); // Force update to show new speed
-        break;
     }
   }
   
@@ -112,11 +86,13 @@ export class BoatControls {
     switch (event.code) {
       case 'ArrowUp':
       case 'KeyW':
-        this.moveForward = false;
+        // Inverted: W/Up now moves backward
+        this.moveBackward = false;
         break;
       case 'ArrowDown':
       case 'KeyS':
-        this.moveBackward = false;
+        // Inverted: S/Down now moves forward
+        this.moveForward = false;
         break;
       case 'ArrowLeft':
       case 'KeyA':
@@ -180,7 +156,6 @@ export class BoatControls {
     
     // Update camera position immediately
     this.updateCameraPosition();
-    this.updateDebugDisplay();
   }
   
   private updateCameraPosition(): void {
@@ -231,55 +206,6 @@ export class BoatControls {
     }
   }
   
-  private createDebugDisplay(): void {
-    // Create debug element if it doesn't exist
-    if (!this.debugElement) {
-      this.debugElement = document.createElement('div');
-      this.debugElement.style.position = 'absolute';
-      this.debugElement.style.top = '10px';
-      this.debugElement.style.left = '10px';
-      this.debugElement.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-      this.debugElement.style.color = 'white';
-      this.debugElement.style.padding = '10px';
-      this.debugElement.style.fontFamily = 'monospace';
-      this.debugElement.style.fontSize = '14px';
-      this.debugElement.style.borderRadius = '5px';
-      this.debugElement.style.zIndex = '1000';
-      document.body.appendChild(this.debugElement);
-    }
-  }
-  
-  private updateDebugDisplay(): void {
-    if (!this.debugElement || !this.showDebug) return;
-    
-    const now = performance.now();
-    if (now - this.lastDebugUpdate < this.debugUpdateInterval) return;
-    
-    this.lastDebugUpdate = now;
-    
-    // Get boat direction in degrees for display
-    const directionDegrees = (this.boatDirection * 180 / Math.PI) % 360;
-    const formattedDirection = directionDegrees < 0 
-      ? (360 + directionDegrees).toFixed(0) 
-      : directionDegrees.toFixed(0);
-    
-    // Update debug display
-    this.debugElement.innerHTML = `
-      <div style="font-weight: bold; margin-bottom: 5px;">Boat Debug Info</div>
-      <div>Position:</div>
-      <div>X: ${this.boatPosition.x.toFixed(2)}</div>
-      <div>Y: ${this.boatPosition.y.toFixed(2)}</div>
-      <div>Z: ${this.boatPosition.z.toFixed(2)}</div>
-      <div style="margin-top: 5px;">Direction: ${formattedDirection}°</div>
-      <div>Speed: ${this.boatSpeed.toFixed(1)} / ${this.maxSpeed.toFixed(1)}</div>
-      <div>Camera Mode: ${this.cameraMode}</div>
-      <div style="margin-top: 5px; font-size: 12px;">Controls:</div>
-      <div style="font-size: 12px;">W/S: Accelerate/Decelerate</div>
-      <div style="font-size: 12px;">A/D: Turn Left/Right</div>
-      <div style="font-size: 12px;">C: Change Camera | F1: Toggle Debug</div>
-    `;
-  }
-  
   public update(deltaTime: number): void {
     // Skip if no delta time
     if (!deltaTime) return;
@@ -290,17 +216,17 @@ export class BoatControls {
     } else if (this.turnRight) {
       this.boatRotationSpeed -= this.rotationSpeed * deltaTime;
     } else {
-      // Gradually reduce rotation speed when not turning
+      // Apply damping to rotation
       this.boatRotationSpeed *= 0.9;
     }
     
-    // Apply rotation speed limits
-    this.boatRotationSpeed = Math.max(-1.5, Math.min(1.5, this.boatRotationSpeed));
-    
-    // Apply rotation to boat direction
+    // Apply rotation speed to boat direction
     this.boatDirection += this.boatRotationSpeed * deltaTime;
     
-    // Handle boat acceleration/deceleration
+    // Apply damping to rotation speed
+    this.boatRotationSpeed *= 0.95;
+    
+    // Handle boat acceleration
     if (this.moveForward) {
       this.boatSpeed += this.acceleration * deltaTime;
     } else if (this.moveBackward) {
@@ -308,35 +234,28 @@ export class BoatControls {
     } else {
       // Apply deceleration when no input
       if (this.boatSpeed > 0) {
-        this.boatSpeed -= this.deceleration * deltaTime;
-        if (this.boatSpeed < 0) this.boatSpeed = 0;
+        this.boatSpeed = Math.max(0, this.boatSpeed - this.deceleration * deltaTime);
       } else if (this.boatSpeed < 0) {
-        this.boatSpeed += this.deceleration * deltaTime;
-        if (this.boatSpeed > 0) this.boatSpeed = 0;
+        this.boatSpeed = Math.min(0, this.boatSpeed + this.deceleration * deltaTime);
       }
     }
     
-    // Apply speed limits
-    this.boatSpeed = Math.max(-this.maxSpeed / 2, Math.min(this.maxSpeed, this.boatSpeed));
+    // Clamp speed to max speed
+    this.boatSpeed = THREE.MathUtils.clamp(this.boatSpeed, -this.maxSpeed / 2, this.maxSpeed);
     
-    // Apply drag (water resistance)
+    // Apply drag
     this.boatSpeed *= this.drag;
     
     // Calculate movement vector based on boat direction and speed
-    if (Math.abs(this.boatSpeed) > 0.01) {
-      const moveX = Math.sin(this.boatDirection) * this.boatSpeed * deltaTime;
-      const moveZ = Math.cos(this.boatDirection) * this.boatSpeed * deltaTime;
-      
-      // Update boat position
-      this.boatPosition.x += moveX;
-      this.boatPosition.z += moveZ;
-    }
+    const moveX = Math.sin(this.boatDirection) * this.boatSpeed * deltaTime;
+    const moveZ = Math.cos(this.boatDirection) * this.boatSpeed * deltaTime;
     
-    // Update camera position based on boat position and direction
+    // Update boat position
+    this.boatPosition.x += moveX;
+    this.boatPosition.z += moveZ;
+    
+    // Update camera position based on boat
     this.updateCameraPosition();
-    
-    // Update debug display
-    this.updateDebugDisplay();
   }
   
   // Public getters for boat properties
@@ -365,10 +284,5 @@ export class BoatControls {
     document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
     document.removeEventListener('pointerlockchange', () => {});
     this.domElement.removeEventListener('click', () => {});
-    
-    // Remove debug display
-    if (this.debugElement && this.debugElement.parentNode) {
-      this.debugElement.parentNode.removeChild(this.debugElement);
-    }
   }
 } 

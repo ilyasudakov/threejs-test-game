@@ -1,11 +1,10 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import * as THREE from "three";
 import { createScene } from "../utils/sceneSetup";
 import { createTerrain } from "../utils/terrainGenerator";
 import { BoatControls } from "../utils/boatControls";
 import { createSun } from "../utils/sunCreator";
 import { createBoat } from "../utils/boatCreator";
-// Removed cenotaph import
 
 const Game = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -20,6 +19,77 @@ const Game = () => {
     sunLight: THREE.DirectionalLight;
     target: THREE.Object3D;
   } | null>(null);
+  const [isLoopRunning, setIsLoopRunning] = useState<boolean>(false);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const isAnimatingRef = useRef<boolean>(true);
+
+  // Function to start/restart animation loop
+  const startAnimationLoop = useCallback(() => {
+    if (!rendererRef.current || !sceneRef.current || !cameraRef.current) {
+      console.warn("Cannot start animation loop - missing required references");
+      return;
+    }
+    
+    isAnimatingRef.current = true;
+    setIsLoopRunning(true);
+    
+    let lastTime = performance.now();
+
+    const animate = () => {
+      // Only continue if we should be animating
+      if (!isAnimatingRef.current) return;
+      
+      try {
+        // Calculate delta time for smooth movement
+        const currentTime = performance.now();
+        const deltaTime = Math.min(
+          0.1,
+          (currentTime - (lastTime || currentTime)) / 1000
+        ); // Convert to seconds, cap at 0.1s
+        lastTime = currentTime;
+
+        // Update controls
+        if (controlsRef.current && boatRef.current) {
+          // Update boat controls with delta time
+          controlsRef.current.update(deltaTime);
+
+          // Update boat mesh position to match the boat position in controls
+          boatRef.current.position.copy(controlsRef.current.getBoatPosition());
+
+          // Update boat rotation based on boat direction
+          boatRef.current.rotation.y = controlsRef.current.getBoatDirection();
+        }
+
+        // Use rendererRef.current instead of renderer
+        if (rendererRef.current && sceneRef.current && cameraRef.current) {
+          rendererRef.current.render(sceneRef.current, cameraRef.current);
+        } else {
+          console.warn("Render skipped: Missing required references");
+        }
+        
+        // Request next frame at the end to ensure proper recursion
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+      } catch (error) {
+        console.error("Error in animation loop:", error);
+        // Try to recover by requesting next frame
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    // Start the animation loop
+    animationFrameIdRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Function to stop animation loop
+  const stopAnimationLoop = useCallback(() => {
+    isAnimatingRef.current = false;
+    setIsLoopRunning(false);
+    
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+  }, []);
 
   // Initialize the scene
   useEffect(() => {
@@ -51,11 +121,11 @@ const Game = () => {
     // Create a boat for the player
     const boat = createBoat();
     boatRef.current = boat;
-    boat.position.set(0, 2, -300); // Position the boat above the water
+    boat.position.set(0, 2, 0); // Position the boat at the center for better visibility
     scene.add(boat);
 
     // Add a simple light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Increased intensity for brighter scene
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Increased intensity for brighter scene
     scene.add(ambientLight);
 
     // Add sun with more dramatic lighting in a static position
@@ -63,7 +133,7 @@ const Game = () => {
     const { sunMesh, sunLight, target } = createSun(
       100, // Size
       0xffcc66, // Warmer color
-      1.2, // Intensity
+      1.5, // Increased intensity
       sunPosition // Static position
     );
 
@@ -84,70 +154,84 @@ const Game = () => {
       boatControls.setBoatPosition(boat.position);
     }
 
+    // Position camera to see the boat - closer and looking directly at the boat
+    camera.position.set(0, 30, 50); // Higher up and closer
+    camera.lookAt(0, 0, 0); // Look at the center where the boat is
+
     // Handle window resize
     const handleResize = () => {
-      if (!camera || !renderer) return;
+      if (!cameraRef.current || !rendererRef.current) return;
 
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
     };
 
     window.addEventListener("resize", handleResize);
-
-    // Animation loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      
-      // Calculate delta time for smooth movement
-      const currentTime = performance.now();
-      const deltaTime = Math.min(0.1, (currentTime - (lastTime || currentTime)) / 1000); // Convert to seconds, cap at 0.1s
-      lastTime = currentTime;
-      
-      // Update controls
-      if (controlsRef.current && boatRef.current) {
-        // Update boat controls with delta time
-        controlsRef.current.update(deltaTime);
-        
-        // Update boat mesh position to match the boat position in controls
-        boatRef.current.position.copy(controlsRef.current.getBoatPosition());
-        
-        // Update boat rotation based on boat direction
-        boatRef.current.rotation.y = controlsRef.current.getBoatDirection();
-      }
-      
-      renderer.render(scene, camera);
-    };
     
-    let lastTime: number;
-    animate();
+    // Force initial resize
+    handleResize();
+
+    // Make sure the renderer is properly attached to the DOM
+    if (containerRef.current && renderer.domElement && !containerRef.current.contains(renderer.domElement)) {
+      containerRef.current.appendChild(renderer.domElement);
+    }
+
+    // Start animation loop
+    startAnimationLoop();
 
     // Cleanup function
     return () => {
+      stopAnimationLoop();
+      
       window.removeEventListener("resize", handleResize);
 
       // Dispose of resources
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
-      
+
       // Dispose of controls
       if (controlsRef.current) {
         controlsRef.current.dispose();
       }
     };
-  }, []);
+  }, []); // Empty dependency array to ensure this only runs once
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: "100%",
-        height: "100vh",
-        overflow: "hidden",
-        backgroundColor: "black",
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        style={{
+          width: "100%",
+          height: "100vh",
+          overflow: "hidden",
+          backgroundColor: "black",
+        }}
+      />
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        <button 
+          onClick={isLoopRunning ? stopAnimationLoop : startAnimationLoop}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: isLoopRunning ? '#ff4444' : '#44ff44',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          {isLoopRunning ? 'Stop Animation' : 'Start Animation'}
+        </button>
+      </div>
+    </>
   );
 };
 

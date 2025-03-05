@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { createScene } from "../utils/sceneSetup";
 import { createTerrain } from "../utils/terrainGenerator";
-import { FirstPersonControls } from "../utils/firstPersonControls";
+import { BoatControls } from "../utils/boatControls";
 import { createSun } from "../utils/sunCreator";
 import { createBoat } from "../utils/boatCreator";
 // Removed cenotaph import
@@ -12,7 +12,7 @@ const Game = () => {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const controlsRef = useRef<FirstPersonControls | null>(null);
+  const controlsRef = useRef<BoatControls | null>(null);
   const terrainRef = useRef<THREE.Mesh | null>(null);
   const boatRef = useRef<THREE.Group | null>(null);
   const sunRef = useRef<{
@@ -48,7 +48,7 @@ const Game = () => {
     terrainRef.current = terrain;
     scene.add(terrain);
 
-    // Create a simple boat for the player
+    // Create a boat for the player
     const boat = createBoat();
     boatRef.current = boat;
     boat.position.set(0, 2, -300); // Position the boat above the water
@@ -75,14 +75,14 @@ const Game = () => {
     // Store sun reference
     sunRef.current = { sunMesh, sunLight, target };
 
-    // Add first-person controls
-    const fpControls = new FirstPersonControls(camera, renderer.domElement);
-    // Set boat speed through the available properties
-    // Note: We don't directly set movementSpeed as it's private
-    controlsRef.current = fpControls;
+    // Add boat controls
+    const boatControls = new BoatControls(camera, renderer.domElement);
+    controlsRef.current = boatControls;
 
-    // Set initial camera position
-    camera.position.set(0, 5, -300);
+    // Set initial boat position for the controls
+    if (boat) {
+      boatControls.setBoatPosition(boat.position);
+    }
 
     // Handle window resize
     const handleResize = () => {
@@ -98,9 +98,28 @@ const Game = () => {
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
+      
+      // Calculate delta time for smooth movement
+      const currentTime = performance.now();
+      const deltaTime = Math.min(0.1, (currentTime - (lastTime || currentTime)) / 1000); // Convert to seconds, cap at 0.1s
+      lastTime = currentTime;
+      
+      // Update controls
+      if (controlsRef.current && boatRef.current) {
+        // Update boat controls with delta time
+        controlsRef.current.update(deltaTime);
+        
+        // Update boat mesh position to match the boat position in controls
+        boatRef.current.position.copy(controlsRef.current.getBoatPosition());
+        
+        // Update boat rotation based on boat direction
+        boatRef.current.rotation.y = controlsRef.current.getBoatDirection();
+      }
+      
       renderer.render(scene, camera);
     };
-
+    
+    let lastTime: number;
     animate();
 
     // Cleanup function
@@ -110,6 +129,11 @@ const Game = () => {
       // Dispose of resources
       if (rendererRef.current) {
         rendererRef.current.dispose();
+      }
+      
+      // Dispose of controls
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
       }
     };
   }, []);

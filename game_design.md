@@ -13,17 +13,18 @@ Seafarer is a relaxing, atmospheric exploration game set in a vast procedurally 
 ## Core Mechanics
 
 ### Boat Navigation & Control
-- First-person perspective from the boat
-- Interactive wheel control system (press E or left-click to control)
+- Third-person perspective with camera following the boat
+- Direct boat control system with intuitive keyboard/mouse or controller input
 - Realistic boat physics affected by waves and weather
 - Boat responds to wave height and direction for immersive sailing
-- Rudder animation that responds to turning
+- Visual feedback through boat animations (rudder movement, sail adjustments)
+- Camera options to adjust distance and angle from the boat
 
 ### Exploration Tools
-- Binoculars for spotting distant landmarks and points of interest
-- Compass or navigation tools to help with orientation
 - Map system that fills in as you explore new areas
-- Telescope for nighttime star navigation
+- Compass or navigation tools integrated into the UI
+- Ability to zoom out for a wider view of surroundings
+- Nighttime navigation tools with star patterns or lighthouse guidance
 
 ### World Design
 - Procedurally generated ocean with realistic wave patterns
@@ -37,6 +38,7 @@ Seafarer is a relaxing, atmospheric exploration game set in a vast procedurally 
 - Hidden coves and underwater treasures
 - Environmental storytelling through ruins and artifacts
 - Collectible items that reveal lore about the world
+- Ability to dock at specific locations to interact with points of interest
 
 ### Weather & Ocean Dynamics
 - Realistic wave simulation with multiple wave patterns
@@ -50,6 +52,7 @@ Seafarer is a relaxing, atmospheric exploration game set in a vast procedurally 
 - Realistic ocean sound effects (waves, wind, etc.)
 - Minimal UI to maintain immersion
 - Optional photo mode to capture beautiful ocean vistas
+- Camera effects that enhance the feeling of being at sea
 
 ## Visual Style
 - Low-poly aesthetic with stylized water shaders
@@ -57,6 +60,7 @@ Seafarer is a relaxing, atmospheric exploration game set in a vast procedurally 
 - Particle effects for sea spray, foam, and weather
 - Post-processing effects (bloom, color grading) to enhance mood
 - Stylized but readable distant landmarks
+- Detailed boat model with visible upgrades and customizations
 
 ## Player Progression
 - No traditional leveling or skill systems
@@ -64,12 +68,13 @@ Seafarer is a relaxing, atmospheric exploration game set in a vast procedurally 
 - Journal or logbook that fills with information about discovered locations
 - Upgrades for your boat that can be found or crafted
 - Unlockable viewpoints or special locations that reveal more of the map
+- Visual boat improvements that reflect progression
 
 ## Technical Implementation Plan
 1. Core boat physics and control system ✓
 2. Wave simulation with multiple wave patterns ✓
 3. Basic weather system with storm intensity ✓
-4. Implement binoculars and distant landmark spotting
+4. Implement third-person camera system with follow mechanics
 5. Create procedural island and landmark generation
 6. Develop discovery and collection mechanics
 7. Add atmospheric effects (lighting, particles, post-processing)
@@ -79,6 +84,7 @@ Seafarer is a relaxing, atmospheric exploration game set in a vast procedurally 
 11. Polish UI and add quality-of-life features
 
 ## Inspiration References
+- Dredge (boat control and third-person perspective)
 - Sea of Thieves (sailing mechanics)
 - The Legend of Zelda: Wind Waker (ocean exploration)
 - Rime (visual style and atmosphere)

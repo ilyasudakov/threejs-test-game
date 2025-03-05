@@ -37,6 +37,16 @@ export class BoatControls {
   // Physics
   private drag: number = 0.95; // Air/water resistance
   
+  // Terrain interaction
+  private terrain: THREE.Mesh | null = null;
+  private boatRotation: THREE.Euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  private boatTiltAmount: number = 0.6; // Increased from 0.2 to 0.6 for more dramatic tilting
+  private boatTiltSpeed: number = 3.0; // Increased from 2.0 to 3.0 for faster response to waves
+  private boatHeightOffset: number = 2.5; // Increased from 0.8 to 2.5 to better match wave amplitude of 5
+  private lastWaveHeight: number = 0; // Store the last wave height for smooth interpolation
+  private heightDamping: number = 0.85; // Damping factor for height changes (0-1, higher = smoother)
+  private useAverageHeight: boolean = true; // Use average height instead of maximum height
+  
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
     this.camera = camera;
     this.domElement = domElement;
@@ -47,6 +57,11 @@ export class BoatControls {
     
     // Set initial camera position
     this.updateCameraPosition();
+  }
+  
+  // Set terrain reference for wave height sampling
+  public setTerrain(terrain: THREE.Mesh): void {
+    this.terrain = terrain;
   }
   
   private initKeyboardControls(): void {
@@ -162,10 +177,7 @@ export class BoatControls {
     // Calculate camera position based on boat position, direction, and camera mode
     if (this.cameraMode === 'firstPerson') {
       // First-person: camera at boat position with offset
-      const boatQuat = new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0), 
-        this.boatDirection
-      );
+      const boatQuat = new THREE.Quaternion().setFromEuler(this.boatRotation);
       
       // Apply first-person camera offset (at the helm)
       const offsetVector = new THREE.Vector3(0, 2, -1);
@@ -176,15 +188,17 @@ export class BoatControls {
       
       // Apply mouse look in first-person mode
       const lookQuat = new THREE.Quaternion()
-        .setFromEuler(new THREE.Euler(this.mousePitch, this.mouseYaw + this.boatDirection, 0, 'YXZ'));
+        .setFromEuler(new THREE.Euler(
+          this.mousePitch + this.boatRotation.x, 
+          this.mouseYaw + this.boatRotation.y, 
+          this.boatRotation.z, 
+          'YXZ'
+        ));
       
       this.camera.quaternion.copy(lookQuat);
     } else {
       // Third-person modes
-      const boatQuat = new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0), 
-        this.boatDirection
-      );
+      const boatQuat = new THREE.Quaternion().setFromEuler(this.boatRotation);
       
       // Apply camera offset based on boat direction
       const offsetVector = this.cameraOffset.clone();
@@ -206,9 +220,127 @@ export class BoatControls {
     }
   }
   
+  // Get the wave height at the boat's position
+  private getWaveHeightAtBoat(): number {
+    if (!this.terrain || !(this.terrain as any).getHeightAt) {
+      return 0; // Default to 0 if no terrain or getHeightAt method
+    }
+    
+    // Sample multiple points around the boat for better height determination
+    // Use more sample points with weighted averaging for smoother movement
+    const boatLength = 10; // Half the boat's length
+    const boatWidth = 4;  // Half the boat's width
+    
+    // Calculate direction vectors
+    const forwardVector = new THREE.Vector3(
+      Math.sin(this.boatDirection),
+      0,
+      Math.cos(this.boatDirection)
+    );
+    const rightVector = new THREE.Vector3(
+      Math.sin(this.boatDirection + Math.PI/2),
+      0,
+      Math.cos(this.boatDirection + Math.PI/2)
+    );
+    
+    // Sample points with weights (center has highest weight)
+    const samplePoints = [
+      { pos: this.boatPosition.clone(), weight: 0.5 }, // Center (50% weight)
+      { pos: this.boatPosition.clone().add(forwardVector.clone().multiplyScalar(boatLength)), weight: 0.15 }, // Bow
+      { pos: this.boatPosition.clone().add(forwardVector.clone().multiplyScalar(-boatLength)), weight: 0.15 }, // Stern
+      { pos: this.boatPosition.clone().add(rightVector.clone().multiplyScalar(boatWidth)), weight: 0.1 }, // Starboard
+      { pos: this.boatPosition.clone().add(rightVector.clone().multiplyScalar(-boatWidth)), weight: 0.1 }, // Port
+    ];
+    
+    // Calculate weighted average height
+    let totalHeight = 0;
+    let totalWeight = 0;
+    let maxHeight = -Infinity;
+    
+    for (const point of samplePoints) {
+      const height = (this.terrain as any).getHeightAt(point.pos.x, point.pos.z);
+      totalHeight += height * point.weight;
+      totalWeight += point.weight;
+      maxHeight = Math.max(maxHeight, height);
+    }
+    
+    // Calculate the weighted average height
+    const averageHeight = totalHeight / totalWeight;
+    
+    // Choose between average and max height based on setting
+    const targetHeight = this.useAverageHeight ? averageHeight : maxHeight;
+    
+    // Apply damping for smoother transitions
+    if (this.lastWaveHeight === 0) {
+      this.lastWaveHeight = targetHeight; // Initialize on first call
+    } else {
+      // Interpolate between last height and current height
+      this.lastWaveHeight = this.lastWaveHeight * this.heightDamping + 
+                           targetHeight * (1 - this.heightDamping);
+    }
+    
+    return this.lastWaveHeight;
+  }
+  
+  // Get the wave normal at the boat's position
+  private getWaveNormalAtBoat(): THREE.Vector3 {
+    if (!this.terrain || !(this.terrain as any).getNormalAt) {
+      return new THREE.Vector3(0, 1, 0); // Default to up if no terrain or getNormalAt method
+    }
+    
+    // Sample normals at multiple points and average them for smoother rotation
+    const boatLength = 10; // Half the boat's length
+    const boatWidth = 4;  // Half the boat's width
+    
+    // Calculate direction vectors
+    const forwardVector = new THREE.Vector3(
+      Math.sin(this.boatDirection),
+      0,
+      Math.cos(this.boatDirection)
+    );
+    const rightVector = new THREE.Vector3(
+      Math.sin(this.boatDirection + Math.PI/2),
+      0,
+      Math.cos(this.boatDirection + Math.PI/2)
+    );
+    
+    // Sample points with weights (center has highest weight)
+    const samplePoints = [
+      { pos: this.boatPosition.clone(), weight: 0.5 }, // Center (50% weight)
+      { pos: this.boatPosition.clone().add(forwardVector.clone().multiplyScalar(boatLength * 0.7)), weight: 0.15 }, // Bow (slightly closer)
+      { pos: this.boatPosition.clone().add(forwardVector.clone().multiplyScalar(-boatLength * 0.7)), weight: 0.15 }, // Stern (slightly closer)
+      { pos: this.boatPosition.clone().add(rightVector.clone().multiplyScalar(boatWidth * 0.7)), weight: 0.1 }, // Starboard (slightly closer)
+      { pos: this.boatPosition.clone().add(rightVector.clone().multiplyScalar(-boatWidth * 0.7)), weight: 0.1 }, // Port (slightly closer)
+    ];
+    
+    // Calculate weighted average normal
+    const averageNormal = new THREE.Vector3(0, 0, 0);
+    let totalWeight = 0;
+    
+    for (const point of samplePoints) {
+      const normal = (this.terrain as any).getNormalAt(point.pos.x, point.pos.z);
+      averageNormal.x += normal.x * point.weight;
+      averageNormal.y += normal.y * point.weight;
+      averageNormal.z += normal.z * point.weight;
+      totalWeight += point.weight;
+    }
+    
+    // Normalize the weighted average
+    averageNormal.divideScalar(totalWeight).normalize();
+    
+    return averageNormal;
+  }
+  
   public update(deltaTime: number): void {
     // Skip if no delta time
     if (!deltaTime) return;
+    
+    // Get wave information at boat position
+    const waveHeight = this.getWaveHeightAtBoat();
+    const waveNormal = this.getWaveNormalAtBoat();
+    
+    // Calculate wave steepness (how steep the wave is at the boat's position)
+    const waveSteepness = 1.0 - Math.abs(waveNormal.y); // 0 = flat, 1 = vertical
     
     // Handle boat rotation
     if (this.turnLeft) {
@@ -228,7 +360,9 @@ export class BoatControls {
     
     // Handle boat acceleration
     if (this.moveForward) {
-      this.boatSpeed += this.acceleration * deltaTime;
+      // Reduce acceleration when going uphill
+      const accelerationMultiplier = 1.0 - (waveSteepness * 0.5);
+      this.boatSpeed += this.acceleration * accelerationMultiplier * deltaTime;
     } else if (this.moveBackward) {
       this.boatSpeed -= this.acceleration * deltaTime;
     } else {
@@ -240,19 +374,69 @@ export class BoatControls {
       }
     }
     
+    // Add gravity effect on slopes - boat speeds up going downhill, slows down going uphill
+    const gravityEffect = waveSteepness * 120.0; // Strength of gravity effect
+    
+    // Calculate dot product between boat direction and wave normal projected on xz plane
+    const boatDirectionVector = new THREE.Vector3(
+      Math.sin(this.boatDirection),
+      0,
+      Math.cos(this.boatDirection)
+    );
+    const waveNormalXZ = new THREE.Vector3(waveNormal.x, 0, waveNormal.z).normalize();
+    const dotProduct = boatDirectionVector.dot(waveNormalXZ);
+    
+    // Apply gravity effect based on whether we're going uphill or downhill
+    this.boatSpeed += gravityEffect * -dotProduct * deltaTime;
+    
     // Clamp speed to max speed
     this.boatSpeed = THREE.MathUtils.clamp(this.boatSpeed, -this.maxSpeed / 2, this.maxSpeed);
     
-    // Apply drag
-    this.boatSpeed *= this.drag;
+    // Apply drag - more drag in steep waves
+    const effectiveDrag = this.drag * (1.0 - waveSteepness * 0.1);
+    this.boatSpeed *= effectiveDrag;
     
     // Calculate movement vector based on boat direction and speed
     const moveX = Math.sin(this.boatDirection) * this.boatSpeed * deltaTime;
     const moveZ = Math.cos(this.boatDirection) * this.boatSpeed * deltaTime;
     
-    // Update boat position
+    // Update boat position (x and z only)
     this.boatPosition.x += moveX;
     this.boatPosition.z += moveZ;
+    
+    // Update boat height based on wave height
+    this.boatPosition.y = waveHeight + this.boatHeightOffset;
+    
+    // Calculate target rotation from wave normal
+    const targetRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+    
+    // Calculate speed factor - less tilt at higher speeds for stability
+    const speedFactor = Math.min(1.0, Math.abs(this.boatSpeed) / (this.maxSpeed * 0.5));
+    
+    // Reduce tilt at high speeds for more stability
+    const stabilityFactor = 1.0 - (speedFactor * 0.5);
+    const tiltFactor = this.boatTiltAmount * stabilityFactor;
+    
+    // Set pitch (x-rotation) based on z-component of normal
+    targetRotation.x = Math.asin(waveNormal.z * tiltFactor);
+    
+    // Set roll (z-rotation) based on x-component of normal
+    targetRotation.z = -Math.asin(waveNormal.x * tiltFactor);
+    
+    // Add additional roll when turning based on rotation speed and boat speed
+    const turnTilt = this.boatRotationSpeed * 0.2 * speedFactor;
+    targetRotation.z -= turnTilt;
+    
+    // Keep the boat's y-rotation (direction)
+    targetRotation.y = this.boatDirection;
+    
+    // Smoothly interpolate current rotation to target rotation
+    // Use variable interpolation speed based on boat speed (faster at low speeds, slower at high speeds)
+    const rotationLerpFactor = Math.max(0.5, 1.0 - (speedFactor * 0.3)) * this.boatTiltSpeed * deltaTime;
+    
+    this.boatRotation.x += (targetRotation.x - this.boatRotation.x) * rotationLerpFactor;
+    this.boatRotation.y = targetRotation.y; // Direction changes immediately
+    this.boatRotation.z += (targetRotation.z - this.boatRotation.z) * rotationLerpFactor;
     
     // Update camera position based on boat
     this.updateCameraPosition();
@@ -269,6 +453,19 @@ export class BoatControls {
   
   public getBoatPosition(): THREE.Vector3 {
     return this.boatPosition.clone();
+  }
+  
+  public getBoatRotation(): THREE.Euler {
+    return this.boatRotation.clone();
+  }
+  
+  // Debug methods
+  public getDebugWaveNormal(): THREE.Vector3 {
+    return this.getWaveNormalAtBoat();
+  }
+  
+  public getDebugWaveHeight(): number {
+    return this.getWaveHeightAtBoat();
   }
   
   // Set the boat position (useful for initialization or teleporting)

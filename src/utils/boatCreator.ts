@@ -55,6 +55,55 @@ export const createBoat = (): THREE.Group => {
   deck.receiveShadow = true;
   boatGroup.add(deck);
   
+  // Add gunwales (side walls) around the deck
+  const gunwaleHeight = 1.5; // Height of the side walls
+  const gunwaleThickness = 0.4; // Thickness of the walls
+  
+  // Left gunwale (side wall)
+  const leftGunwaleGeometry = new THREE.BoxGeometry(gunwaleThickness, gunwaleHeight, 19);
+  const gunwaleMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xe74c3c, // Match the hull color
+    roughness: 0.7,
+    metalness: 0.1
+  });
+  const leftGunwale = new THREE.Mesh(leftGunwaleGeometry, gunwaleMaterial);
+  leftGunwale.position.x = 3.75 - (gunwaleThickness / 2); // Position at the edge of the deck
+  leftGunwale.position.y = 2.25 + (gunwaleHeight / 2); // Position on top of the deck
+  leftGunwale.position.z = 0;
+  leftGunwale.castShadow = true;
+  leftGunwale.receiveShadow = true;
+  boatGroup.add(leftGunwale);
+  
+  // Right gunwale (side wall)
+  const rightGunwaleGeometry = new THREE.BoxGeometry(gunwaleThickness, gunwaleHeight, 19);
+  const rightGunwale = new THREE.Mesh(rightGunwaleGeometry, gunwaleMaterial);
+  rightGunwale.position.x = -3.75 + (gunwaleThickness / 2); // Position at the edge of the deck
+  rightGunwale.position.y = 2.25 + (gunwaleHeight / 2); // Position on top of the deck
+  rightGunwale.position.z = 0;
+  rightGunwale.castShadow = true;
+  rightGunwale.receiveShadow = true;
+  boatGroup.add(rightGunwale);
+  
+  // Front gunwale (bow)
+  const frontGunwaleGeometry = new THREE.BoxGeometry(7.5 - (gunwaleThickness * 2), gunwaleHeight, gunwaleThickness);
+  const frontGunwale = new THREE.Mesh(frontGunwaleGeometry, gunwaleMaterial);
+  frontGunwale.position.x = 0;
+  frontGunwale.position.y = 2.25 + (gunwaleHeight / 2); // Position on top of the deck
+  frontGunwale.position.z = -9.5 + (gunwaleThickness / 2); // Position at the front edge of the deck
+  frontGunwale.castShadow = true;
+  frontGunwale.receiveShadow = true;
+  boatGroup.add(frontGunwale);
+  
+  // Back gunwale (stern)
+  const backGunwaleGeometry = new THREE.BoxGeometry(7.5 - (gunwaleThickness * 2), gunwaleHeight, gunwaleThickness);
+  const backGunwale = new THREE.Mesh(backGunwaleGeometry, gunwaleMaterial);
+  backGunwale.position.x = 0;
+  backGunwale.position.y = 2.25 + (gunwaleHeight / 2); // Position on top of the deck
+  backGunwale.position.z = 9.5 - (gunwaleThickness / 2); // Position at the back edge of the deck
+  backGunwale.castShadow = true;
+  backGunwale.receiveShadow = true;
+  boatGroup.add(backGunwale);
+  
   // Cabin - white with blue windows
   const cabinGeometry = new THREE.BoxGeometry(6, 4, 6);
   const cabinMaterial = new THREE.MeshStandardMaterial({ 
@@ -189,33 +238,55 @@ export const createBoat = (): THREE.Group => {
     metalness: 0.1
   });
   
+  // Red stripes for life preservers
+  const redStripeMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xe74c3c, // Bright red
+    roughness: 0.7,
+    metalness: 0.1
+  });
+  
+  // Create a function to add red stripes to life preservers
+  const createLifePreserver = (x: number, y: number, z: number): THREE.Group => {
+    const preserverGroup = new THREE.Group();
+    
+    // Main white ring
+    const ring = new THREE.Mesh(preserverGeometry, preserverMaterial);
+    ring.castShadow = true;
+    ring.receiveShadow = true;
+    preserverGroup.add(ring);
+    
+    // Add red stripes (smaller torus rings at 90 degree angles)
+    const stripeGeometry = new THREE.TorusGeometry(0.6, 0.05, 8, 16);
+    
+    // Vertical stripe
+    const verticalStripe = new THREE.Mesh(stripeGeometry, redStripeMaterial);
+    verticalStripe.rotation.y = Math.PI / 2;
+    verticalStripe.castShadow = true;
+    verticalStripe.receiveShadow = true;
+    preserverGroup.add(verticalStripe);
+    
+    // Horizontal stripe
+    const horizontalStripe = new THREE.Mesh(stripeGeometry, redStripeMaterial);
+    horizontalStripe.castShadow = true;
+    horizontalStripe.receiveShadow = true;
+    preserverGroup.add(horizontalStripe);
+    
+    // Position the entire group
+    preserverGroup.position.set(x, y, z);
+    preserverGroup.rotation.y = Math.PI / 2;
+    
+    return preserverGroup;
+  };
+  
   // Left side preservers
-  const leftPreserver1 = new THREE.Mesh(preserverGeometry, preserverMaterial);
-  leftPreserver1.position.x = 4.1;
-  leftPreserver1.position.y = 3;
-  leftPreserver1.position.z = 0;
-  leftPreserver1.rotation.y = Math.PI / 2;
-  leftPreserver1.castShadow = true;
-  leftPreserver1.receiveShadow = true;
+  const leftPreserver1 = createLifePreserver(3.75, 3, 0);
   boatGroup.add(leftPreserver1);
   
-  const leftPreserver2 = new THREE.Mesh(preserverGeometry, preserverMaterial);
-  leftPreserver2.position.x = 4.1;
-  leftPreserver2.position.y = 3;
-  leftPreserver2.position.z = 3;
-  leftPreserver2.rotation.y = Math.PI / 2;
-  leftPreserver2.castShadow = true;
-  leftPreserver2.receiveShadow = true;
+  const leftPreserver2 = createLifePreserver(3.75, 3, 3);
   boatGroup.add(leftPreserver2);
   
   // Right side preserver
-  const rightPreserver = new THREE.Mesh(preserverGeometry, preserverMaterial);
-  rightPreserver.position.x = -4.1;
-  rightPreserver.position.y = 3;
-  rightPreserver.position.z = 0;
-  rightPreserver.rotation.y = Math.PI / 2;
-  rightPreserver.castShadow = true;
-  rightPreserver.receiveShadow = true;
+  const rightPreserver = createLifePreserver(-3.75, 3, 0);
   boatGroup.add(rightPreserver);
   
   // Add rudder
@@ -239,13 +310,13 @@ export const createBoat = (): THREE.Group => {
   const splashGroup = new THREE.Group();
   const splashGeometry = new THREE.SphereGeometry(0.2, 4, 4);
   const splashMaterial = new THREE.MeshBasicMaterial({ 
-    color: 0xffffff,
+    color: 0xadd8e6, // Light blue color for water
     transparent: true,
     opacity: 0.7
   });
   
   for (let i = 0; i < splashCount; i++) {
-    const splash = new THREE.Mesh(splashGeometry, splashMaterial);
+    const splash = new THREE.Mesh(splashGeometry, splashMaterial.clone());
     splash.visible = false;
     // Store initial position and velocity for animation
     (splash as any).velocity = new THREE.Vector3(
@@ -258,12 +329,59 @@ export const createBoat = (): THREE.Group => {
     splashGroup.add(splash);
   }
   
-  // Position splash at the front of the boat
-  splashGroup.position.z = -10;
+  // Create additional smaller splash droplets for more realistic effect
+  const dropletCount = 30;
+  const dropletGeometry = new THREE.SphereGeometry(0.1, 3, 3);
+  const dropletMaterial = new THREE.MeshBasicMaterial({
+    color: 0xd4f1f9, // Very light blue, almost white
+    transparent: true,
+    opacity: 0.6
+  });
+  
+  for (let i = 0; i < dropletCount; i++) {
+    const droplet = new THREE.Mesh(dropletGeometry, dropletMaterial.clone());
+    droplet.visible = false;
+    // Store initial position and velocity for animation
+    (droplet as any).velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 3,
+      Math.random() * 7 + 3, // Higher initial velocity for droplets
+      (Math.random() - 0.5) * 3
+    );
+    (droplet as any).life = 0;
+    (droplet as any).maxLife = Math.random() * 0.8 + 0.3; // Shorter lifespan
+    splashGroup.add(droplet);
+  }
+  
+  // Position splash at the front and sides of the boat
+  splashGroup.position.z = -10; // Front of boat
   splashGroup.position.y = 0;
   // Store splash group for animation
   (boatGroup as any).splashGroup = splashGroup;
   boatGroup.add(splashGroup);
+  
+  // Create a second splash group for the sides/wake of the boat
+  const wakeGroup = new THREE.Group();
+  
+  // Clone the splash particles for the wake
+  for (let i = 0; i < 15; i++) {
+    const wakeSplash = new THREE.Mesh(splashGeometry, splashMaterial.clone());
+    wakeSplash.visible = false;
+    (wakeSplash as any).velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 2,
+      Math.random() * 3 + 1, // Lower height for wake
+      (Math.random() - 0.5) * 2
+    );
+    (wakeSplash as any).life = 0;
+    (wakeSplash as any).maxLife = Math.random() * 1.2 + 0.8; // Longer life for wake
+    wakeGroup.add(wakeSplash);
+  }
+  
+  // Position wake at the sides/back of the boat
+  wakeGroup.position.z = 5; // Back of boat
+  wakeGroup.position.y = 0;
+  // Store wake group for animation
+  (boatGroup as any).wakeGroup = wakeGroup;
+  boatGroup.add(wakeGroup);
   
   return boatGroup;
 }; 
